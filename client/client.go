@@ -11,11 +11,12 @@ import (
   "google.golang.org/grpc"
   // "google.golang.org/grpc/credentials"
   "google.golang.org/grpc/metadata"
+  "google.golang.org/grpc/resolver"
   "google.golang.org/grpc/status"
 )
 
 func main() {
-  addr := "localhost:50051"
+  // addr := "localhost:50051"
   // TLSで通信する
   // creds, err := credentials.NewClientTLSFromFile("server.crt", "")
   // if err != nil {
@@ -24,7 +25,13 @@ func main() {
   // conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
 
   // intercepter
-  conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(unaryIntercepter))
+  // conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(unaryIntercepter))
+
+  // load balancer
+  resolver.Register(&exampleResolverBuilder{})
+  addr := "testScheme:///example"
+  conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBalancerName("round_robin"))
+
   if err != nil {
     log.Fatalf("did not connect: %v", err)
   }
@@ -74,3 +81,36 @@ func unaryIntercepter(ctx context.Context, method string, req, reply interface{}
   log.Printf("after call: %s, response: %+v", method, reply)
   return err
 }
+
+type exampleResolverBuilder struct{}
+
+func (*exampleResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOption) (resolver.Resolver, error) {
+  r := &exampleResolver {
+    target: target,
+    cc: cc,
+    addrsStore: map[string][]string {
+      "example": {"localhost:50051", "localhost:50052"},
+    },
+  }
+  r.start()
+  return r, nil
+}
+func (*exampleResolverBuilder) Scheme() string { return "testScheme" }
+
+type exampleResolver struct {
+  target      resolver.Target
+  cc          resolver.ClientConn
+  addrsStore  map[string][]string
+}
+
+func (r *exampleResolver) start() {
+  addrStrs := r.addrsStore[r.target.Endpoint]
+  addrs := make([]resolver.Address, len(addrStrs))
+  for i, s := range addrStrs {
+    addrs[i] = resolver.Address{Addr: s}
+  }
+  r.cc.UpdateState(resolver.State{Addresses: addrs})
+}
+func (*exampleResolver) ResolveNow(o resolver.ResolveNowOption) {}
+func (*exampleResolver) Close() {}
+

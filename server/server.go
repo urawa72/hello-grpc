@@ -37,13 +37,13 @@ func main() {
   if err != nil {
     log.Fatalf("failed to listen: %v", err)
   }
+  s := grpc.NewServer()
   // TLSで通信 wiresharkでキャプチャできなくなる
   // cred, err := credentials.NewServerTLSFromFile("server.crt", "private.key")
   // if err != nil {
   //   log.Fatal(err)
   // }
   // s := grpc.NewServer(grpc.Creds(cred))
-  s := grpc.NewServer()
   pb.RegisterGreeterServer(s, &server{})
   log.Printf("gRPC server listening on" + addr)
   if err := s.Serve(lis); err != nil {
