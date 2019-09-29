@@ -9,18 +9,22 @@ import (
   pb "github.com/urawa72/hello-grpc"
   "google.golang.org/genproto/googleapis/rpc/errdetails"
   "google.golang.org/grpc"
-  "google.golang.org/grpc/credentials"
+  // "google.golang.org/grpc/credentials"
   "google.golang.org/grpc/metadata"
   "google.golang.org/grpc/status"
 )
 
 func main() {
   addr := "localhost:50051"
-  creds, err := credentials.NewClientTLSFromFile("server.crt", "")
-  if err != nil {
-    log.Fatal(err)
-  }
-  conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+  // TLSで通信する
+  // creds, err := credentials.NewClientTLSFromFile("server.crt", "")
+  // if err != nil {
+  //   log.Fatal(err)
+  // }
+  // conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+
+  // intercepter
+  conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(unaryIntercepter))
   if err != nil {
     log.Fatalf("did not connect: %v", err)
   }
@@ -61,4 +65,12 @@ func main() {
     }
   }
   log.Printf("Greeting: %s", r.Message)
+}
+
+// interceptor
+func unaryIntercepter(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+  log.Printf("before call: %s, request: %+v", method, req)
+  err := invoker(ctx, method, req, reply, cc, opts...)
+  log.Printf("after call: %s, response: %+v", method, reply)
+  return err
 }
