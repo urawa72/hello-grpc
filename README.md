@@ -26,3 +26,15 @@ go run client.go World
 ```
 export GODEBUG=http2debug=2
 ```
+
+## オレオレ証明書
+* 以下の3つを`./server`に配置
+* `server.crt`は`./client`にも
+```
+# 秘密鍵生成
+openssl genrsa 2048 > private.key
+# 署名要求作成 Common Nameにはlocalhostを設定
+openssl req -new -key private.key > server.csr
+# 証明書作成
+openssl x509 -days 367 -req -signkey private.key < server.csr > server.crt
+```

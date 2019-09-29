@@ -9,13 +9,18 @@ import (
   pb "github.com/urawa72/hello-grpc"
   "google.golang.org/genproto/googleapis/rpc/errdetails"
   "google.golang.org/grpc"
+  "google.golang.org/grpc/credentials"
   "google.golang.org/grpc/metadata"
   "google.golang.org/grpc/status"
 )
 
 func main() {
   addr := "localhost:50051"
-  conn, err := grpc.Dial(addr, grpc.WithInsecure())
+  creds, err := credentials.NewClientTLSFromFile("server.crt", "")
+  if err != nil {
+    log.Fatal(err)
+  }
+  conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
   if err != nil {
     log.Fatalf("did not connect: %v", err)
   }
